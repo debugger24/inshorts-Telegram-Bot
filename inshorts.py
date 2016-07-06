@@ -5,6 +5,7 @@ import sqlite3
 from telegram.ext import Updater
 import logging
 from telegram.ext import CommandHandler
+import datetime
 
 def fetchNews():
     conn = sqlite3.connect('inshorts.db')
@@ -39,14 +40,73 @@ def fetchNews():
 
     cur.close()
 
+def checkUserLastNews(chat_id):
+    conn = sqlite3.connect('inshorts.db')
+    cur = conn.cursor()
+    cur.execute('SELECT LastNewsID FROM Users WHERE ChatID = ?', (chat_id, ))
+    row = cur.fetchone()
+    if row is None:
+        cur.execute('INSERT INTO Users (ChatID, LastNewsID) VALUES (? , ?)', (chat_id, 1))
+        LastReadNewsID = 1
+        print ("\nNew User :", chat_id, "\nLast Read News ID =", LastReadNewsID)
+    else:
+        LastReadNewsID = row[0]
+        print ("\nOld User :", chat_id, "\nLast Read News ID =", LastReadNewsID)
+    conn.commit()
+    cur.close()
+    return LastReadNewsID
+
+def checkTodayFirstNewsID():
+    conn = sqlite3.connect('inshorts.db')
+    cur = conn.cursor()
+    now = datetime.datetime.now()
+    date = now.strftime("%d %b %Y")
+    likeDate = "%" + date + "%"
+    cur.execute('''SELECT ID FROM News WHERE Timestamp LIKE ? ORDER BY ID ASC LIMIT 1''', (likeDate, ))
+    row = cur.fetchone()
+    if row is None:
+        TodayFirstNewsID = 0
+        print ("\nToday First News :", "No news")
+    else:
+        TodayFirstNewsID = row[0]
+        print ("\nToday First News :", TodayFirstNewsID)
+    cur.close()
+    return TodayFirstNewsID
+
+def getNews(LastReadNewsID, chat_id):
+    conn = sqlite3.connect('inshorts.db')
+    cur = conn.cursor()
+    print (LastReadNewsID)
+    cur.execute("SELECT ID, Timestamp, Title, Content FROM News WHERE ID > ? ORDER BY ID ASC LIMIT 1", (LastReadNewsID, ))
+    row = cur.fetchone()
+    if row is None:
+        news = "You have already read all new news."
+    else:
+        news = row[1] + "\n\n" + row[2] + "\n\n" + row[3]
+        cursor = conn.execute("UPDATE Users SET `LastNewsID` = ? WHERE ChatID = ?", (row[0], chat_id))
+    conn.commit()
+    cur.close()
+    return news
+
 def today(bot, update):
     fetchNews()
-    conn = sqlite3.connect('inshorts.db')
-    cursor = conn.execute("SELECT Timestamp, Title, Content from News ORDER BY ID DESC LIMIT 5")
-    for row in cursor:
-        news = row[0] + "\n\n" + row[1] + "\n\n" + row[2]
-        print (news)
-        bot.sendMessage(chat_id=update.message.chat_id, text=news)
+
+
+    # Check if user exists
+    chat_id = update.message.chat_id
+
+    LastReadNewsID = checkUserLastNews(chat_id)
+    TodayFirstNewsID = checkTodayFirstNewsID()
+
+    if(TodayFirstNewsID == 0):
+        news = "No news for today."
+    elif(LastReadNewsID < TodayFirstNewsID):
+        LastReadNewsID = TodayFirstNewsID
+
+    if(TodayFirstNewsID != 0):
+        news = getNews(LastReadNewsID, chat_id)
+
+    bot.sendMessage(chat_id, news)
 
 
 updater = Updater(token='TOKEN KEY')
