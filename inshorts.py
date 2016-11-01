@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import sqlite3
 from telegram.ext import Updater
 import logging
+import telegram
 from telegram.ext import CommandHandler
 import datetime
 import re
@@ -96,11 +97,12 @@ def getNews(LastReadNewsID, chat_id):
     return (news,image)
 
 def today(bot, update):
-    fetchNews()
-
-
     # Check if user exists
     chat_id = update.message.chat_id
+
+    bot.sendChatAction(chat_id=chat_id, action=telegram.ChatAction.TYPING)
+
+    fetchNews()
 
     LastReadNewsID = checkUserLastNews(chat_id)
     TodayFirstNewsID = checkTodayFirstNewsID()
