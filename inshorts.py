@@ -11,11 +11,6 @@ import os
 
 API_KEY = ""
 
-def downloadImage(imageLink):
-    directory = "images"
-    os.system("aria2c " + imageLink + " --dir='" + directory + "'")
-    return re.findall('/(inshorts.+jpg)',imageLink)[0]
-
 def fetchNews():
     conn = sqlite3.connect('inshorts.db')
     cur = conn.cursor()
@@ -43,8 +38,7 @@ def fetchNews():
         cur.execute('''SELECT Title FROM News WHERE Title = ? OR Content = ?''', (title, content))
         row = cur.fetchone()
         if row is None:
-            filename = downloadImage(imageLink)
-            cur.execute('''INSERT INTO News (Timestamp, Title, Content, Image) VALUES ( ?, ?, ?, ? )''', (datetime , title, content, filename ))
+            cur.execute('''INSERT INTO News (Timestamp, Title, Content, Image) VALUES ( ?, ?, ?, ? )''', (datetime , title, content, imageLink ))
             count += 1
         conn.commit()
 
@@ -119,7 +113,7 @@ def today(bot, update):
     if(TodayFirstNewsID != 0):
         news,image = getNews(LastReadNewsID, chat_id)
 
-    bot.sendPhoto(chat_id=chat_id, photo=open('images/' + image, 'rb'))
+    bot.sendPhoto(chat_id=chat_id, photo=image)
     bot.sendMessage(chat_id, news)
 
 
