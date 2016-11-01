@@ -7,6 +7,8 @@ import logging
 from telegram.ext import CommandHandler
 import datetime
 
+API_KEY = ""
+
 def fetchNews():
     conn = sqlite3.connect('inshorts.db')
     cur = conn.cursor()
@@ -109,7 +111,7 @@ def today(bot, update):
     bot.sendMessage(chat_id, news)
 
 
-updater = Updater(token='TOKEN KEY')
+updater = Updater(token=API_KEY)
 dispatcher = updater.dispatcher
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 today_handler = CommandHandler('today', today)
