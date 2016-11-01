@@ -6,8 +6,15 @@ from telegram.ext import Updater
 import logging
 from telegram.ext import CommandHandler
 import datetime
+import re
+import os
 
 API_KEY = ""
+
+def downloadImage(imageLink):
+    directory = "images"
+    os.system("aria2c " + imageLink + " --dir='" + directory + "'")
+    return re.findall('/(inshorts.+jpg)',imageLink)[0]
 
 def fetchNews():
     conn = sqlite3.connect('inshorts.db')
@@ -26,6 +33,8 @@ def fetchNews():
     news_collection.reverse()
 
     for news in news_collection:
+        imageLink = (news.contents[1]['style'])
+        imageLink = re.findall('(https.+jpg)', imageLink)[0]
         time = (news.contents[3].div.find_all("span")[2].string)
         date = (news.contents[3].div.find_all("span")[3].string)
         title = (news.contents[3].a.span.string)
@@ -34,7 +43,8 @@ def fetchNews():
         cur.execute('''SELECT Title FROM News WHERE Title = ? OR Content = ?''', (title, content))
         row = cur.fetchone()
         if row is None:
-            cur.execute('''INSERT INTO News (Timestamp, Title, Content) VALUES ( ?, ?, ? )''', (datetime , title, content ))
+            filename = downloadImage(imageLink)
+            cur.execute('''INSERT INTO News (Timestamp, Title, Content, Image) VALUES ( ?, ?, ?, ? )''', (datetime , title, content, filename ))
             count += 1
         conn.commit()
 
@@ -79,16 +89,17 @@ def getNews(LastReadNewsID, chat_id):
     conn = sqlite3.connect('inshorts.db')
     cur = conn.cursor()
     print (LastReadNewsID)
-    cur.execute("SELECT ID, Timestamp, Title, Content FROM News WHERE ID > ? ORDER BY ID ASC LIMIT 1", (LastReadNewsID, ))
+    cur.execute("SELECT ID, Timestamp, Title, Content, Image FROM News WHERE ID > ? ORDER BY ID ASC LIMIT 1", (LastReadNewsID, ))
     row = cur.fetchone()
     if row is None:
         news = "You have already read all new news."
     else:
         news = row[1] + "\n\n" + row[2] + "\n\n" + row[3]
+        image = row[4]
         cursor = conn.execute("UPDATE Users SET `LastNewsID` = ? WHERE ChatID = ?", (row[0], chat_id))
     conn.commit()
     cur.close()
-    return news
+    return (news,image)
 
 def today(bot, update):
     fetchNews()
@@ -106,8 +117,9 @@ def today(bot, update):
         LastReadNewsID = TodayFirstNewsID
 
     if(TodayFirstNewsID != 0):
-        news = getNews(LastReadNewsID, chat_id)
+        news,image = getNews(LastReadNewsID, chat_id)
 
+    bot.sendPhoto(chat_id=chat_id, photo=open('images/' + image, 'rb'))
     bot.sendMessage(chat_id, news)
 
 
