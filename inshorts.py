@@ -106,6 +106,8 @@ def today(bot, update):
 
     LastReadNewsID = checkUserLastNews(chat_id)
     TodayFirstNewsID = checkTodayFirstNewsID()
+    news = "No news"
+    image = None
 
     if(TodayFirstNewsID == 0):
         news = "No news for today."
@@ -115,7 +117,8 @@ def today(bot, update):
     if(TodayFirstNewsID != 0):
         news,image = getNews(LastReadNewsID, chat_id)
 
-    bot.sendPhoto(chat_id=chat_id, photo=image)
+    if(image != None):
+        bot.sendPhoto(chat_id=chat_id, photo=image)
     bot.sendMessage(chat_id, news)
 
 
