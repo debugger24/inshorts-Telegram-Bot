@@ -30,7 +30,7 @@ def fetchNews():
 
     for news in news_collection:
         imageLink = (news.contents[1]['style'])
-        imageLink = re.findall('(https.+jpg)', imageLink)[0]
+        imageLink = re.findall('(https.+)?resize', imageLink)[0]
         time = (news.contents[3].div.find_all("span")[2].string)
         date = (news.contents[3].div.find_all("span")[3].string)
         title = (news.contents[3].a.span.string)
